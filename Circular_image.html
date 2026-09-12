@@ -305,12 +305,12 @@
       const minItemSize = 40;
       const maxItemSize = 120;
 
+      const itemSize = Math.max(minItemSize, maxItemSize - count * 1.2);
       // 큰 개수에서도 이미지가 1000px 캔버스 밖으로 잘리지 않도록 반지름을 제한합니다.
       const radius = Math.min(
         baseRadius + (count > 30 ? (count - 30) * 4 : 0),
         containerSize / 2 - itemSize / 2 - borderWidth
       );
-      const itemSize = Math.max(minItemSize, maxItemSize - count * 1.2);
 
       const centerX = containerSize / 2;
       const centerY = containerSize / 2;
