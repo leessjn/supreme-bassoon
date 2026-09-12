@@ -36,6 +36,17 @@
 
 ---
 
+### GitHub Pages로 올리기
+
+1. GitHub에서 새 저장소를 만들고 이 폴더의 **파일 전체**를 업로드합니다.
+2. 저장소의 **Settings → Pages**를 엽니다.
+3. **Build and deployment**에서 `Deploy from a branch`를 고르고, Branch는 `main`, 폴더는 `/(root)`로 설정한 뒤 저장합니다.
+4. 잠시 뒤 표시되는 `https://사용자이름.github.io/저장소이름/` 주소로 접속하면 됩니다.
+
+`index.html`이 포함되어 있어 위 기본 주소로 바로 열립니다. 기존의 `Circular_image.html` 주소도 계속 사용할 수 있습니다.
+
+---
+
 ### 현재 기능
 
 - 이미지 일괄/개별 추가 기능  
