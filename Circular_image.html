@@ -1,0 +1,355 @@
+<!-- 생략 없이 전체 HTML 코드이며, "파일명 표시" 포함 -->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>원형 이미지 배치</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+    }
+
+    body {
+      background-color: #ffffff;
+      font-family: Arial, sans-serif;
+      padding-top: calc(env(safe-area-inset-top, 0px) + 20px);
+      padding-right: env(safe-area-inset-right, 0px);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+      padding-left: env(safe-area-inset-left, 0px);
+      box-sizing: border-box;
+    }
+
+    .container {
+      display: flex;
+      height: calc(100vh - 20px);
+    }
+
+    .form-container {
+      width: 300px;
+      padding: 20px;
+      overflow-y: auto;
+      background-color: #f2f2f2;
+      box-sizing: border-box;
+    }
+
+    .form-group {
+      margin-bottom: 12px;
+      font-weight: bold;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .file-name-label {
+      font-size: 12px;
+      color: #333;
+      margin-top: 4px;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .add-button {
+      background-color: #6cbf6c;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+
+    .bulk-button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+
+    .download-button {
+      background-color: #4b8bbe;
+      color: white;
+      border: none;
+      padding: 10px 14px;
+      cursor: pointer;
+      border-radius: 5px;
+      margin-top: 15px;
+    }
+
+    .circle-container-wrapper {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: auto;
+    }
+
+    .circle-container {
+      position: relative;
+      width: 1000px;
+      height: 1000px;
+    }
+
+    .circle-item {
+      position: absolute;
+      border-radius: 50%;
+      overflow: hidden;
+      background-color: white;
+    }
+
+    .circle-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #e74c3c;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 5px;
+      font-weight: bold;
+      display: none;
+      z-index: 1000;
+    }
+
+    .border-controls {
+      margin-bottom: 20px;
+    }
+
+    .border-controls label {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .border-controls input[type="range"] {
+      width: 100%;
+    }
+
+    .border-controls input[type="color"] {
+      width: 100%;
+      height: 30px;
+      padding: 0;
+      border: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="form-container">
+      <div class="border-controls">
+        <label for="borderWidthSlider">테두리 두께: <span id="borderWidthValue">2</span>px</label>
+        <input type="range" id="borderWidthSlider" min="0" max="10" value="2">
+        <label for="borderColorPicker">테두리 색상:</label>
+        <input type="color" id="borderColorPicker" value="#cccccc">
+      </div>
+
+      <div id="inputList"></div>
+
+      <div class="buttons">
+        <button class="bulk-button" onclick="bulkAddImages()">한꺼번에 추가</button>
+        <button class="add-button" onclick="addInput()">추가</button>
+        <button class="remove-button" onclick="removeInput()">삭제</button>
+      </div>
+      <button class="download-button" onclick="downloadImage()">이미지 다운로드</button>
+
+      <input type="file" id="bulkFileInput" multiple accept="image/*" style="display: none" onchange="handleBulkFiles(event)">
+    </div>
+
+    <div class="circle-container-wrapper">
+      <div class="circle-container" id="circleContainer"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">이미지는 최대 60개만 가능합니다.</div>
+
+  <script>
+    // 60장의 이미지까지 원형으로 배치할 수 있습니다.
+    const maxImages = 60;
+    const inputList = document.getElementById('inputList');
+    const circleContainer = document.getElementById('circleContainer');
+    const toast = document.getElementById('toast');
+    const bulkFileInput = document.getElementById('bulkFileInput');
+
+    const borderWidthSlider = document.getElementById('borderWidthSlider');
+    const borderWidthValue = document.getElementById('borderWidthValue');
+    const borderColorPicker = document.getElementById('borderColorPicker');
+
+    let borderWidth = parseInt(borderWidthSlider.value);
+    let borderColor = borderColorPicker.value;
+    let imageFiles = [];
+
+    borderWidthSlider.addEventListener('input', () => {
+      borderWidth = parseInt(borderWidthSlider.value);
+      borderWidthValue.textContent = borderWidth;
+      renderCircle();
+    });
+
+    borderColorPicker.addEventListener('input', () => {
+      borderColor = borderColorPicker.value;
+      renderCircle();
+    });
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.style.display = 'block';
+      setTimeout(() => {
+        toast.style.display = 'none';
+      }, 2000);
+    }
+
+    function addInput(fileData = null, fileName = "") {
+      if (imageFiles.length >= maxImages) {
+        showToast(`이미지는 최대 ${maxImages}개만 가능합니다.`);
+        return;
+      }
+
+      const index = imageFiles.length;
+      const formGroup = document.createElement('div');
+      formGroup.className = 'form-group';
+
+      const label = document.createElement('label');
+      label.textContent = `[${index + 1}] 이미지 업로드`;
+
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.setAttribute('data-index', index);
+
+      const fileNameLabel = document.createElement('div');
+      fileNameLabel.className = 'file-name-label';
+      fileNameLabel.textContent = fileName ? fileName : "선택된 파일 없음";
+
+      input.addEventListener('change', (event) => {
+        const idx = parseInt(event.target.getAttribute('data-index'));
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          imageFiles[idx] = e.target.result;
+          fileNameLabel.textContent = file.name;
+          renderCircle();
+        };
+        reader.readAsDataURL(file);
+      });
+
+      formGroup.appendChild(label);
+      formGroup.appendChild(input);
+      formGroup.appendChild(fileNameLabel);
+      inputList.appendChild(formGroup);
+
+      if (fileData) {
+        imageFiles.push(fileData);
+        fileNameLabel.textContent = fileName;
+        renderCircle();
+      } else {
+        imageFiles.push(null);
+      }
+    }
+
+    function removeInput() {
+      if (imageFiles.length > 0) {
+        imageFiles.pop();
+        inputList.removeChild(inputList.lastChild);
+        renderCircle();
+      }
+    }
+
+    function bulkAddImages() {
+      bulkFileInput.click();
+    }
+
+    function handleBulkFiles(event) {
+      const files = Array.from(event.target.files);
+      const availableSlots = maxImages - imageFiles.length;
+
+      if (files.length > availableSlots) {
+        showToast(`최대 ${availableSlots}장까지 추가할 수 있습니다.`);
+      }
+
+      const validFiles = files.slice(0, availableSlots);
+
+      validFiles.forEach((file) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          addInput(e.target.result, file.name);
+        };
+        reader.readAsDataURL(file);
+      });
+
+      event.target.value = ""; // 초기화
+    }
+
+    function renderCircle() {
+      circleContainer.innerHTML = '';
+      const count = imageFiles.filter(img => img).length;
+      if (count === 0) return;
+
+      const baseRadius = 380;
+      const containerSize = 1000;
+      const minItemSize = 40;
+      const maxItemSize = 120;
+
+      // 큰 개수에서도 이미지가 1000px 캔버스 밖으로 잘리지 않도록 반지름을 제한합니다.
+      const radius = Math.min(
+        baseRadius + (count > 30 ? (count - 30) * 4 : 0),
+        containerSize / 2 - itemSize / 2 - borderWidth
+      );
+      const itemSize = Math.max(minItemSize, maxItemSize - count * 1.2);
+
+      const centerX = containerSize / 2;
+      const centerY = containerSize / 2;
+
+      let validIndex = 0;
+      imageFiles.forEach((img) => {
+        if (!img) return;
+
+        const angle = (2 * Math.PI * validIndex) / count;
+        const x = centerX + radius * Math.cos(angle) - itemSize / 2;
+        const y = centerY + radius * Math.sin(angle) - itemSize / 2;
+
+        const div = document.createElement('div');
+        div.className = 'circle-item';
+        div.style.width = `${itemSize}px`;
+        div.style.height = `${itemSize}px`;
+        div.style.left = `${x}px`;
+        div.style.top = `${y}px`;
+        div.style.border = `${borderWidth}px solid ${borderColor}`;
+
+        const image = document.createElement('img');
+        image.src = img;
+        div.appendChild(image);
+
+        circleContainer.appendChild(div);
+        validIndex++;
+      });
+    }
+
+    function downloadImage() {
+      html2canvas(circleContainer, { scale: 3 }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = 'circle.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      });
+    }
+  </script>
+</body>
+  <!--이 주석을 보시는 분들은 소소한 행운이 오셨으면 좋겠습니다.-->
+  <!--https://github.com/dororoko/Circular-image-layout-->
+</html>
